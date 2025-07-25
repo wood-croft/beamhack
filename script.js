@@ -225,54 +225,54 @@ async function loadAssets() {
   levelData = await res.json();
 
   // Load border image
-  borderImage = await loadImage('/sprites/border.png');
+  borderImage = await loadImage('sprites/border.png');
 
   // Load level images (0–13)
   const loadPromises = [];
   for (let i = 0; i < MAX_LEVELS; i++) {
-    const lvlPromise = loadImage(`/sprites/lvl${bgTextureMap[i]}.png`).then(img => {
+    const lvlPromise = loadImage(`sprites/lvl${bgTextureMap[i]}.png`).then(img => {
       lvlImages[i] = img;
     });
-    const bgPromise = loadImage(`/sprites/lvl${bgTextureMap[i]}_bg.png`).then(img => {
+    const bgPromise = loadImage(`sprites/lvl${bgTextureMap[i]}_bg.png`).then(img => {
       lvlBgImages[i] = img;
     });
     loadPromises.push(lvlPromise, bgPromise);
   }
   for (let i = 0; i < packetsN.length; i++) {
-    const packetPromise = loadImage(`/sprites/node_shatter_fg_${packetsN[i]}.png`).then(img => {
+    const packetPromise = loadImage(`sprites/node_shatter_fg_${packetsN[i]}.png`).then(img => {
       packetsImages[i] = img;
     });
     loadPromises.push(packetPromise);
   }
   for (let i = 0; i < firewallsN.length; i++) {
-    const firewallPromise = loadImage(`/sprites/firewall_shatter_fg_${firewallsN[i]}.png`).then(img => {
+    const firewallPromise = loadImage(`sprites/firewall_shatter_fg_${firewallsN[i]}.png`).then(img => {
       firewallsImages[i] = img;
     });
     loadPromises.push(firewallPromise);
   }
   const beamLayers = ["glow_tapered", "middle", "top"];
   for (let i = 0; i < beamLayers.length; i++) {
-    const beamPromise = loadImage(`/sprites/beam_${beamLayers[i]}.png`).then(img => {
+    const beamPromise = loadImage(`sprites/beam_${beamLayers[i]}.png`).then(img => {
       beamImages[i] = img;
     });
     loadPromises.push(beamPromise);
   }
   for (let i = 0; i < 4; i++) {
-    const beamTipPromise = loadImage(`/sprites/beam_spark_${i+1}.png`).then(img => {
+    const beamTipPromise = loadImage(`sprites/beam_spark_${i+1}.png`).then(img => {
       beamTipImages[i] = img;
     });
     loadPromises.push(beamTipPromise);
   }
   const mirrorLayers = ["base", "highlight"];
   for (let i = 0; i < mirrorLayers.length; i++) {
-    const beamPromise = loadImage(`/sprites/mirror_${mirrorLayers[i]}.png`).then(img => {
+    const beamPromise = loadImage(`sprites/mirror_${mirrorLayers[i]}.png`).then(img => {
       mirrorImages[i] = img;
     });
     loadPromises.push(beamPromise);
   }
   const proxyLayers = [0, 1, 2, 3, 4, 5, 6, 7];
   for (let i = 0; i < proxyLayers.length; i++) {
-    const beamPromise = loadImage(`/sprites/prism_fg_${proxyLayers[i] * 45}.png`).then(img => {
+    const beamPromise = loadImage(`sprites/prism_fg_${proxyLayers[i] * 45}.png`).then(img => {
       proxyImages[i] = img;
     });
     loadPromises.push(beamPromise);
