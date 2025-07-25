@@ -38,7 +38,7 @@ const beamTipImages = [];
 const mirrorImages = [];
 const proxyImages = [];
 const cursorImage = new Image();
-cursorImage.src = "/sprites/cursor_0.png";
+cursorImage.src = "sprites/cursor_0.png";
 const bgTextureMap = [0, 1, 2, 3, 12, 5, 6, 7, 8, 9, 10, 11, 13, 14];
 
 let gameWidth;
