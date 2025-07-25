@@ -221,7 +221,7 @@ function drawTextAtGameCoord(text, x, y, options = {}) {
 }
 
 async function loadAssets() {
-  const res = await fetch('/levels.json');
+  const res = await fetch('./levels.json');
   levelData = await res.json();
 
   // Load border image
