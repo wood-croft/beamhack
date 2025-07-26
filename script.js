@@ -509,6 +509,13 @@ function drawMirrors(index) {
     drawOrientedImage(mirrorImages[index], mirror[0], mirror[1]);
 }
 
+function drawKeysMenu() {
+  const scale = canvas.width / 1657;
+  const aspectRatio = 1.152;
+  const size = 145 * scale;
+  ctx.drawImage(keysImage, 5*scale, 5*scale, size*aspectRatio, size);
+}
+
 function drawLevel() {
   const lvlImage = lvlImages[currentLevel];
   const lvlBgImage = lvlBgImages[currentLevel];
@@ -557,10 +564,7 @@ function drawLevel() {
   drawTextAtGameCoord(formatTimeInterval(startTime, performance.now()), 0.85, 0.097);
   drawTextAtGameCoord(`L${currentLevel + 1}`, 1.095, 0.097);
   
-  const scale = canvas.width / 1657;
-  const aspectRatio = 1.152;
-  const size = 145 * scale;
-  ctx.drawImage(keysImage, 5*scale, 5*scale, size*aspectRatio, size);
+  drawKeysMenu();
 }
 
 function rotateMirror(mirrorIndex, degrees) {
@@ -775,6 +779,7 @@ function getNearbyMirror() {
 function initGame() {
   startButton.style.display = 'none';
   canvas.style.display = 'block';
+  canvas.style.cursor = 'none';
   //currentLevel = 0;
   startFrameLoop();
 }
@@ -800,8 +805,11 @@ function loadLevel() {
   for (let i = 0; i < levelData[currentLevel]["iMaxFirewalls"]; i++)
     firewallDmgs.push(0);
   for (let i = 0; i < levelData[currentLevel]["iMaxNodes"]; i++) {
-    if (i < levelData[currentLevel]["iMaxRotatingNodes"])
-      rotatingMirrors.push(levelData[currentLevel]["vNodes"][i]);
+    if (i < levelData[currentLevel]["iMaxRotatingNodes"]) {
+      let [x0, y0] = levelData[currentLevel]["vNodes"][i][0];
+      let [x1, y1] = levelData[currentLevel]["vNodes"][i][1];
+      rotatingMirrors.push([[x0, y0], [x1, y1]]);
+    }
     else
       fixedMirrors.push(levelData[currentLevel]["vNodes"][i]);
   }
@@ -855,6 +863,31 @@ function stopFrameLoop() {
 
 
 loadAssets().then(() => {
+  const lvlBgImage = lvlBgImages[currentLevel];
+  
+  gameWidth = lvlBgImage.width;
+  gameHeight = lvlBgImage.height;
+
+  const adjustedBorderHeight = borderImage.height / 1.778;
+  const borderAspectRatio = borderImage.width / adjustedBorderHeight;
+
+  let width = window.innerWidth;
+  let height = window.innerHeight;
+
+  if (width / height > borderAspectRatio) {
+    width = height * borderAspectRatio;
+  } else {
+    height = width / borderAspectRatio;
+  }
+
+  canvas.width = width;
+  canvas.height = height;
+  
+  ctx.clearRect(0, 0, width, height);
+  
+  drawKeysMenu();
+  canvas.style.display = 'block';
+  
   loading.style.display = "none";
   startButton.style.display = "block";
 });
@@ -918,12 +951,14 @@ window.addEventListener("keyup", (e) => {
   if (e.code === "Space") keys.Space = false;
   if (e.code === "PageUp") {
     // Destroy all packets and go back 1 level
-    for (let i = 0; i < packetDmgs.length; i++) packetDmgs[i] = 80;
+    for (let i = 0; i < packetDmgs.length; i++)
+      packetDmgs[i] = 80;
     nextLevel = (currentLevel + MAX_LEVELS - 1) % MAX_LEVELS;
   }
   if (e.code === "PageDown") {
     // Destroy all packets and go forward 1 level
-    for (let i = 0; i < packetDmgs.length; i++) packetDmgs[i] = 80;
+    for (let i = 0; i < packetDmgs.length; i++)
+      packetDmgs[i] = 80;
     nextLevel = (currentLevel + 1) % MAX_LEVELS;
   }
 });
