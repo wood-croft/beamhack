@@ -24,9 +24,11 @@ let keys = {
   A: false,
   D: false,
   Tab: false,
+  Shift: false,
   Space: false,
 };
 
+let keysImage;
 let borderImage;
 let levelData = [];
 const lvlImages = [];
@@ -207,11 +209,13 @@ function drawCursor() {
 
 function drawTextAtGameCoord(text, x, y, options = {}) {
   const [px, py] = gameToCanvas(x, y);
+  
+  const fontSize = Math.round(42 * canvas.width / 1657);
 
   ctx.save();
 
   ctx.fillStyle = options.color || "purple";
-  ctx.font = options.font || 'bold 42px "Courier New", monospace'; 
+  ctx.font = options.font || `bold ${fontSize}px "Courier New", monospace`; 
   ctx.textAlign = options.align || "center";
   ctx.textBaseline = options.baseline || "middle";
 
@@ -223,6 +227,8 @@ function drawTextAtGameCoord(text, x, y, options = {}) {
 async function loadAssets() {
   const res = await fetch('./levels.json');
   levelData = await res.json();
+
+  keysImage = await loadImage('keys.svg');
 
   // Load border image
   borderImage = await loadImage('sprites/border.png');
@@ -550,6 +556,11 @@ function drawLevel() {
   ctx.drawImage(borderImage, 0, 0, canvas.width, canvas.height);
   drawTextAtGameCoord(formatTimeInterval(startTime, performance.now()), 0.85, 0.097);
   drawTextAtGameCoord(`L${currentLevel + 1}`, 1.095, 0.097);
+  
+  const scale = canvas.width / 1657;
+  const aspectRatio = 1.152;
+  const size = 145 * scale;
+  ctx.drawImage(keysImage, 5*scale, 5*scale, size*aspectRatio, size);
 }
 
 function rotateMirror(mirrorIndex, degrees) {
@@ -580,7 +591,7 @@ function rotateMirror(mirrorIndex, degrees) {
 
 function updateAngle(nFrames) {
   let angle = 0;
-  let multiple = keys.Tab || keys.Space ? 2 : 1;
+  let multiple = keys.Tab || keys.Shift || keys.Space ? 2 : 1;
   let sign = keys.A ? -1 : 1;
   
   if (keys.A != keys.D && selectedMirror != null) {
@@ -892,6 +903,7 @@ window.addEventListener("keydown", (e) => {
     keys.Tab = true;
     e.preventDefault(); // prevent focus shift on Tab
   }
+  if (e.code === "ShiftLeft") keys.Shift = true;
   if (e.code === "Space") keys.Space = true;
   if ((e.key === "Enter" || e.code === "Space") && startButton.style.display !== "none") {
     startButton.click(); // Simulate button click
@@ -902,6 +914,7 @@ window.addEventListener("keyup", (e) => {
   if (e.code === "KeyA") keys.A = false;
   if (e.code === "KeyD") keys.D = false;
   if (e.code === "Tab") keys.Tab = false;
+  if (e.code === "ShiftLeft") keys.Shift = false;
   if (e.code === "Space") keys.Space = false;
   if (e.code === "PageUp") {
     // Destroy all packets and go back 1 level
