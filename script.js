@@ -1,7 +1,5 @@
 // 16x9 blocks of 43x43
-// 33ms/frame
-
-//for (let i = 0; i < packetDmgs.length; i++) packetDmgs[i] = 80;
+// 33ms/frame ~ 30 fps
 
 const DMG_TO_NEXT_LEVEL = 100;
 
@@ -28,6 +26,8 @@ let keys = {
   Tab: false,
   Shift: false,
   Space: false,
+  ArrowLeft: false,
+  ArrowRight: false,
 };
 
 let keysImage;
@@ -57,7 +57,9 @@ let firewallDmgs = [];
 let rotatingMirrors = [];
 let fixedMirrors = [];
 
-let proxyAngle = 0;
+const STARTING_PROXY_ANGLE = Math.random()*360;
+let proxyAngle = STARTING_PROXY_ANGLE;
+let proxyAngleShift = 0;
 let beamColor = "cyan";
 let selectedMirror = null;
 let remainingAngles = [];
@@ -639,8 +641,8 @@ function updateAngle(nFrames, nMirror) {
     remainingAngle *= sign;
     angle *= sign;
   }
-  else {  // finish rotation
-    snapLater = true;
+  else if (selectedMirror == nMirror) {  // finish rotation
+    snapLater = true
     for (let i = 0; i < nFrames; i++) {
       let speedFactor = Math.abs(remainingAngle)/5;
       angle += speedFactor*multiple;
@@ -654,6 +656,10 @@ function updateAngle(nFrames, nMirror) {
       }
     }
   }
+  else {  // snap when released
+    rotateMirror(nMirror, 0, true);
+    remainingAngles[nMirror] = 0;
+  }
   
   if (angle == 0) {
     remainingAngles[nMirror] = 0;
@@ -665,13 +671,13 @@ function updateAngle(nFrames, nMirror) {
   
   if (snapLater && Math.abs(remainingAngle) < 0.001) {
     rotateMirror(nMirror, remainingAngle, true);
-    remainingAngles[nMirror] = 0.0;
+    remainingAngles[nMirror] = 0;
   }
 }
 
 function getSnappedProxyAngle() {
-  const ticks = Math.floor(proxyAngle/45);
-  return 45 * (ticks % 8);
+  const ticks = Math.floor((proxyAngle + proxyAngleShift)/45);
+  return 45 * ((8 + ticks % 8) % 8);
 }
 
 function redirectByProxy(point) {
@@ -685,6 +691,10 @@ function updateLevel(nFrames) {
   
   for (let nMirror = 0; nMirror < rotatingMirrors.length; nMirror++)
     updateAngle(nFrames, nMirror);
+  if (keys.ArrowLeft)
+    proxyAngleShift += nFrames * 5.0;
+  if (keys.ArrowRight)
+    proxyAngleShift -= nFrames * 5.0;
   proxyAngle += nFrames * (45/25);  // 45 degrees every 25 frames
   let isProxyUsed = [];
   
@@ -823,7 +833,7 @@ function loadLevel() {
   firewallDmgs = [];
   rotatingMirrors = [];
   fixedMirrors = [];
-  proxyAngle = 0;
+  proxyAngle = STARTING_PROXY_ANGLE;
   
   beamColor = "cyan";
   selectedMirror = null;
@@ -933,7 +943,7 @@ startButton.onclick = initGame;
 window.addEventListener("resize", () => {
   if (canvas.style.display === "block") {
     drawLevel(0); // Redraw current level on resize
-    drawCursor()();
+    drawCursor();
   }
 });
 
@@ -973,9 +983,11 @@ window.addEventListener("keydown", (e) => {
   }
   if (e.code === "ShiftLeft") keys.Shift = true;
   if (e.code === "Space") keys.Space = true;
-  if ((e.key === "Enter" || e.code === "Space") && startButton.style.display !== "none") {
+  if ((e.code === "Enter" || e.code === "Space") && startButton.style.display !== "none") {
     startButton.click(); // Simulate button click
   }
+  if (e.code === "ArrowLeft") keys.ArrowLeft = true;
+  if (e.code === "ArrowRight") keys.ArrowRight = true;
 });
 
 window.addEventListener("keyup", (e) => {
@@ -996,11 +1008,17 @@ window.addEventListener("keyup", (e) => {
       packetDmgs[i] = DMG_TO_NEXT_LEVEL;
     nextLevel = (currentLevel + 1) % MAX_LEVELS;
   }
+  if (e.code === "ArrowLeft") keys.ArrowLeft = false;
+  if (e.code === "ArrowRight") keys.ArrowRight = false;
 });
 
 window.addEventListener("blur", () => {
   keys.A = false;
   keys.D = false;
   keys.Tab = false;
+  keys.Shift = false;
+  keys.Space = false;
+  keys.ArrowLeft = false;
+  keys.ArrowRight = false;
   mouseDown = false;
 });
