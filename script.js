@@ -3,6 +3,8 @@
 
 //for (let i = 0; i < packetDmgs.length; i++) packetDmgs[i] = 80;
 
+const DMG_TO_NEXT_LEVEL = 100;
+
 let FRAME_TIME = 33;  // ms
 
 const canvas = document.getElementById('gameCanvas');
@@ -58,8 +60,8 @@ let fixedMirrors = [];
 let proxyAngle = 0;
 let beamColor = "cyan";
 let selectedMirror = null;
-let lastSelectedMirror = null;
-let remainingAngle = 0;
+let remainingAngles = [];
+let startingAngles = [];
 let cursorSize = 1.0;
 const CURSOR_FACTOR = 1.18;
 const CURSOR_MAX_DIST2 = 0.005;
@@ -567,7 +569,21 @@ function drawLevel() {
   drawKeysMenu();
 }
 
-function rotateMirror(mirrorIndex, degrees) {
+// Input: mirror, not index
+function getMirrorAngle(mirror) {
+  const p0 = mirror[0];
+  const p1 = mirror[1];
+
+  // Compute center point (midpoint between p0 and p1)
+  const cx = (p0[0] + p1[0]) / 2;
+  const cy = (p0[1] + p1[1]) / 2;
+  
+  const dx2 = p1[0] - p0[0];
+  const dy2 = p1[1] - p0[1];
+  return Math.atan2(dy2, dx2) * 180 / Math.PI;
+}
+
+function rotateMirror(mirrorIndex, degrees, snap = false) {
   const mirror = rotatingMirrors[mirrorIndex];
   const p0 = mirror[0];
   const p1 = mirror[1];
@@ -576,31 +592,58 @@ function rotateMirror(mirrorIndex, degrees) {
   const cx = (p0[0] + p1[0]) / 2;
   const cy = (p0[1] + p1[1]) / 2;
 
-  const angle = Math.PI * degrees / 180;
-  const cos = Math.cos(angle);
-  const sin = Math.sin(angle);
+  let angleDeg = degrees;
 
-  // Rotate p0
+  
+  if (snap) {
+    const startingAngle = startingAngles[mirrorIndex];
+    const currentAngle = getMirrorAngle(mirror);
+    const newAngle = currentAngle + degrees;
+    const snappedAngle = Math.round((newAngle - startingAngle) / 5) * 5;
+    angleDeg = startingAngle + snappedAngle - currentAngle;
+  }
+
+  const angleRad = Math.PI * angleDeg / 180;
+  const cos = Math.cos(angleRad);
+  const sin = Math.sin(angleRad);
+
   let dx = p0[0] - cx;
   let dy = p0[1] - cy;
   mirror[0][0] = cx + dx * cos - dy * sin;
   mirror[0][1] = cy + dx * sin + dy * cos;
 
-  // Rotate p1
   dx = p1[0] - cx;
   dy = p1[1] - cy;
   mirror[1][0] = cx + dx * cos - dy * sin;
   mirror[1][1] = cy + dx * sin + dy * cos;
 }
 
-function updateAngle(nFrames) {
+function updateAngle(nFrames, nMirror) {
   let angle = 0;
   let multiple = keys.Tab || keys.Shift || keys.Space ? 2 : 1;
   let sign = keys.A ? -1 : 1;
+  let remainingAngle = remainingAngles[nMirror];
+  let snapLater = false;
   
-  if (keys.A != keys.D && selectedMirror != null) {
-    if (remainingAngle * sign < 0) {  // different signs -> finish rotation
-      angle = multiple * nFrames;
+  if (keys.A != keys.D && selectedMirror == nMirror && remainingAngle * sign < 0)
+    remainingAngle = sign * (5 - Math.abs(remainingAngle));
+  
+  if (keys.A != keys.D && selectedMirror == nMirror) {
+    // rotate normally
+    angle = multiple * nFrames;
+    if (angle >= Math.abs(remainingAngle)) {
+      remainingAngle = 5 - ((angle - Math.abs(remainingAngle)) % 5);
+    }
+    else
+      remainingAngle = Math.abs(remainingAngle) - angle;
+    remainingAngle *= sign;
+    angle *= sign;
+  }
+  else {  // finish rotation
+    snapLater = true;
+    for (let i = 0; i < nFrames; i++) {
+      let speedFactor = Math.abs(remainingAngle)/5;
+      angle += speedFactor*multiple;
       if (angle >= Math.abs(remainingAngle)) {
         angle = remainingAngle;
         remainingAngle = 0;
@@ -610,31 +653,20 @@ function updateAngle(nFrames) {
         remainingAngle -= angle;
       }
     }
-    else {  // same sign, rotate normally
-      angle = multiple * nFrames;
-      if (angle >= Math.abs(remainingAngle)) {
-        remainingAngle = 5 - ((angle - Math.abs(remainingAngle)) % 5);
-      }
-      else
-        remainingAngle = Math.abs(remainingAngle) - angle;
-      remainingAngle *= sign;
-      angle *= sign;
-    }
-  }
-  else {  // finish rotation
-    angle = multiple * nFrames;
-    if (angle >= Math.abs(remainingAngle)) {
-      angle = remainingAngle;
-      remainingAngle = 0;
-    }
-    else {
-      angle *= remainingAngle > 0 ? 1.0 : -1.0;
-      remainingAngle -= angle;
-    }
   }
   
-  if (lastSelectedMirror != null && angle != 0)
-    rotateMirror(lastSelectedMirror, angle);
+  if (angle == 0) {
+    remainingAngles[nMirror] = 0;
+    return;
+  }
+  
+  rotateMirror(nMirror, angle);
+  remainingAngles[nMirror] = remainingAngle;
+  
+  if (snapLater && Math.abs(remainingAngle) < 0.001) {
+    rotateMirror(nMirror, remainingAngle, true);
+    remainingAngles[nMirror] = 0.0;
+  }
 }
 
 function getSnappedProxyAngle() {
@@ -651,7 +683,8 @@ function updateLevel(nFrames) {
   if (nFrames == 0)
     return;
   
-  updateAngle(nFrames);
+  for (let nMirror = 0; nMirror < rotatingMirrors.length; nMirror++)
+    updateAngle(nFrames, nMirror);
   proxyAngle += nFrames * (45/25);  // 45 degrees every 25 frames
   let isProxyUsed = [];
   
@@ -794,8 +827,8 @@ function loadLevel() {
   
   beamColor = "cyan";
   selectedMirror = null;
-  lastSelectedMirror = null;
-  remainingAngle = 0;
+  remainingAngles = [];
+  startingAngles = [];
   cursorSize = 1.0;
 
   for (let p of levelData[currentLevel]["vBeam"])
@@ -809,6 +842,8 @@ function loadLevel() {
       let [x0, y0] = levelData[currentLevel]["vNodes"][i][0];
       let [x1, y1] = levelData[currentLevel]["vNodes"][i][1];
       rotatingMirrors.push([[x0, y0], [x1, y1]]);
+      remainingAngles.push(0);
+      startingAngles.push(getMirrorAngle([[x0, y0], [x1, y1]]));
     }
     else
       fixedMirrors.push(levelData[currentLevel]["vNodes"][i]);
@@ -828,7 +863,7 @@ function startFrameLoop() {
       
       let changeLevel = true;
       for (let dmg of packetDmgs) {
-        if (dmg < 80) {
+        if (dmg < DMG_TO_NEXT_LEVEL) {
           changeLevel = false;
           break;
         }
@@ -952,13 +987,13 @@ window.addEventListener("keyup", (e) => {
   if (e.code === "PageUp") {
     // Destroy all packets and go back 1 level
     for (let i = 0; i < packetDmgs.length; i++)
-      packetDmgs[i] = 80;
+      packetDmgs[i] = DMG_TO_NEXT_LEVEL;
     nextLevel = (currentLevel + MAX_LEVELS - 1) % MAX_LEVELS;
   }
   if (e.code === "PageDown") {
     // Destroy all packets and go forward 1 level
     for (let i = 0; i < packetDmgs.length; i++)
-      packetDmgs[i] = 80;
+      packetDmgs[i] = DMG_TO_NEXT_LEVEL;
     nextLevel = (currentLevel + 1) % MAX_LEVELS;
   }
 });
