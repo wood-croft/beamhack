@@ -954,6 +954,7 @@ canvas.addEventListener("mousemove", (e) => {
 });
 
 canvas.addEventListener("mousedown", (e) => {
+  e.preventDefault();
   if (e.button === 0) { // 0 = left button
     mouseDown = true;
     
